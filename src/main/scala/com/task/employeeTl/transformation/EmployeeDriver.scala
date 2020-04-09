@@ -1,9 +1,8 @@
 package com.task.employeeTl.transformation
 
+import com.task.employeeTl.util.utility
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.functions.{broadcast, desc}
 
 object EmployeeDriver {
   def main(args: Array[String]): Unit = {
@@ -23,79 +22,48 @@ object EmployeeDriver {
     val employeeFilteredResPath = envPros.getString("employee_filtered_res_path")
     val departmentMaxEmpResPath = envPros.getString("department_max_emp_res_path")
 
-    var employeeDF = spark.read
-      .format("csv")
-      .option("header", "true")
-      .load(employeeDetailsPath).toDF("empId", "firstName", "lastName", "age")
+    var employeeDF = utility.readDfFromSource(spark, employeeDetailsPath).toDF("empId", "firstName", "lastName", "age")
 
-    val departmentDF = spark.read
-      .format("csv")
-      .option("header", "true")
-      .load(departmentDetailsPath).toDF("deptId", "deptName")
+    val departmentDF = utility.readDfFromSource(spark, departmentDetailsPath).toDF("deptId", "deptName")
 
-    var employeeFinanceDF = spark.read
-      .format("csv")
-      .option("header", "true")
-      .load(employeeFinanceDetailsPath).toDF("empId", "ctc", "basic", "pf", "gratuity")
+    var employeeFinanceDF = utility.readDfFromSource(spark, employeeFinanceDetailsPath).toDF("empId", "ctc", "basic", "pf", "gratuity")
 
-    val employeeDepartmentDF = spark.read
-      .format("csv")
-      .option("header", "true")
-      .load(employeeDeptDetailsPath).toDF("empId", "deptId")
+    val employeeDepartmentDF = utility.readDfFromSource(spark, employeeDeptDetailsPath).toDF("empId", "deptId")
 
     // for each scenario we need age > 35 and >40. so filtering for >35
-    employeeDF = employeeDF
-      .filter(employeeDF("age") > 35)
+    employeeDF = EmployeeTrans.getEmployeeAge35Plus(employeeDF)
 
-    // To make dataset smaller, applied both filter for 2 scenario
-    employeeFinanceDF = employeeFinanceDF
-      .filter(employeeFinanceDF("ctc") > 30000 || employeeFinanceDF("gratuity") < 800)
+    // To make dataset smaller, applied both filter for 2 scenario - ctc > 30000 || gratuity < 800
+    employeeFinanceDF = EmployeeTrans.getEmployeeFinanceDF(employeeFinanceDF)
 
     // emp with age > 40 & ctc > 30,000
-    val employeeCtcDF = employeeDF
-      .filter(employeeDF("age") > 40)
-      .join(employeeFinanceDF
-        .filter(employeeFinanceDF("ctc") > 30000), employeeDF("empId") === employeeFinanceDF("empId"))
+    val employeeCtcDF = EmployeeTrans.getEmpDfAge40PlusCtc30kPlus(employeeDF, employeeFinanceDF)
 
-    val empAge40PlusCtc30kPlus = employeeCtcDF.select(employeeDF("*"), employeeCtcDF("ctc"))
+    // Selecting only required columns for result
+    val empAge40PlusCtc30kPlus = EmployeeTrans.selectDfCols(employeeDF, employeeCtcDF)
 
-    empAge40PlusCtc30kPlus.repartition(1).write
-      .mode("overwrite")
-      .format("csv")
-      .option("header", "true")
-      .save(employeeFilteredResPath)
+    // Persisting final result into output location
+    utility.writeDfIntoPath(employeeFilteredResPath, empAge40PlusCtc30kPlus)
 
     // dept with max emp with age > 35 & gratuity < 800
     // already age > 35 filter applied at top
-    val empAge35PlusGratuity800less = employeeDF
-      .join(employeeFinanceDF
-        .filter(employeeFinanceDF("gratuity") < 800), employeeDF("empId") === employeeFinanceDF("empId"))
+    val empAge35PlusGratuity800less = DepartmentTrans.getEmpAge35PlusGrat800Less(employeeDF, employeeFinanceDF)
 
     // broadcast join among filtered employee finance data and employees department
-    val departmentWithEmpFiltered = employeeDepartmentDF
-      .join(broadcast(empAge35PlusGratuity800less.select(employeeDF("empId"))), "empId")
-      .select(employeeDepartmentDF("*"))
+    val departmentWithEmpFiltered = DepartmentTrans.getDeptForFilteredEmp(employeeDF, employeeDepartmentDF, empAge35PlusGratuity800less)
 
     // performing windowing operation for department and counting employee per dept
-    val windowByDepId = Window.partitionBy("deptId")
-    val departmentWithEmpGrouped = departmentWithEmpFiltered
-      .withColumn("count", org.apache.spark.sql.functions.count("empId").over(windowByDepId))
-      .orderBy(desc("count"))
-      .limit(1)
+    val departmentWithEmpGrouped = DepartmentTrans.getDeptWithGroupedEmp(departmentWithEmpFiltered)
 
     if (departmentWithEmpGrouped.first() != null) {
       // getting deptId with max count
-      val deptWithMaxCount = departmentWithEmpGrouped.select("deptId").first
+      val deptWithMaxCount = DepartmentTrans.getDeptIdWithMaxCount(departmentWithEmpGrouped)
 
       // getting department details for max count employee
-      val resultDept = departmentDF.filter(departmentDF("deptId") === deptWithMaxCount.get(0))
+      val resultDept = DepartmentTrans.getDeptDetailsForMaxCount(departmentDF, deptWithMaxCount)
 
-      resultDept.repartition(1)
-        .write
-        .mode("overwrite")
-        .format("csv")
-        .option("header", "true")
-        .save(departmentMaxEmpResPath)
+      // Writing final result to hdfs
+      utility.writeDfIntoPath(departmentMaxEmpResPath, resultDept)
     }
   }
 }

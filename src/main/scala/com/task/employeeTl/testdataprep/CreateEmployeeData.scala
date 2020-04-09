@@ -22,7 +22,7 @@ object CreateEmployeeData {
     val employeeFinanceDetailsPath = envPros.getString("employee_finance_details_path")
     val employeeDeptDetailsPath = envPros.getString("employee_dept_details_path")
     val departmentDetailsPath = envPros.getString("department_details_path")
-
+    //println(employeeDetailsPath)
     val ageRangeStart = envPros.getString("age_range_start").toInt // need to check for valid value
     val ageRangeEnd = envPros.getString("age_range_end").toInt
     val ctcRangeStart = envPros.getString("ctc_range_start").toInt
