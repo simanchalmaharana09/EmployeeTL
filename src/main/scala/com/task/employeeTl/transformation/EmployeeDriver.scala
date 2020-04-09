@@ -1,6 +1,6 @@
 package com.task.employeeTl.transformation
 
-import com.task.employeeTl.util.utility
+import com.task.employeeTl.util.Utility
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.SparkSession
 
@@ -22,13 +22,13 @@ object EmployeeDriver {
     val employeeFilteredResPath = envPros.getString("employee_filtered_res_path")
     val departmentMaxEmpResPath = envPros.getString("department_max_emp_res_path")
 
-    var employeeDF = utility.readDfFromSource(spark, employeeDetailsPath).toDF("empId", "firstName", "lastName", "age")
+    var employeeDF = Utility.readDfFromSource(spark, employeeDetailsPath).toDF("empId", "firstName", "lastName", "age")
 
-    val departmentDF = utility.readDfFromSource(spark, departmentDetailsPath).toDF("deptId", "deptName")
+    val departmentDF = Utility.readDfFromSource(spark, departmentDetailsPath).toDF("deptId", "deptName")
 
-    var employeeFinanceDF = utility.readDfFromSource(spark, employeeFinanceDetailsPath).toDF("empId", "ctc", "basic", "pf", "gratuity")
+    var employeeFinanceDF = Utility.readDfFromSource(spark, employeeFinanceDetailsPath).toDF("empId", "ctc", "basic", "pf", "gratuity")
 
-    val employeeDepartmentDF = utility.readDfFromSource(spark, employeeDeptDetailsPath).toDF("empId", "deptId")
+    val employeeDepartmentDF = Utility.readDfFromSource(spark, employeeDeptDetailsPath).toDF("empId", "deptId")
 
     // for each scenario we need age > 35 and >40. so filtering for >35
     employeeDF = EmployeeTrans.getEmployeeAge35Plus(employeeDF)
@@ -43,11 +43,11 @@ object EmployeeDriver {
     val empAge40PlusCtc30kPlus = EmployeeTrans.selectDfCols(employeeDF, employeeCtcDF)
 
     // Persisting final result into output location
-    utility.writeDfIntoPath(employeeFilteredResPath, empAge40PlusCtc30kPlus)
+    Utility.writeDfIntoPath(employeeFilteredResPath, empAge40PlusCtc30kPlus)
 
     // dept with max emp with age > 35 & gratuity < 800
     // already age > 35 filter applied at top
-    val empAge35PlusGratuity800less = DepartmentTrans.getEmpAge35PlusGrat800Less(employeeDF, employeeFinanceDF)
+    val empAge35PlusGratuity800less = EmployeeTrans.getEmpAge35PlusGrat800Less(employeeDF, employeeFinanceDF)
 
     // broadcast join among filtered employee finance data and employees department
     val departmentWithEmpFiltered = DepartmentTrans.getDeptForFilteredEmp(employeeDF, employeeDepartmentDF, empAge35PlusGratuity800less)
@@ -63,7 +63,7 @@ object EmployeeDriver {
       val resultDept = DepartmentTrans.getDeptDetailsForMaxCount(departmentDF, deptWithMaxCount)
 
       // Writing final result to hdfs
-      utility.writeDfIntoPath(departmentMaxEmpResPath, resultDept)
+      Utility.writeDfIntoPath(departmentMaxEmpResPath, resultDept)
     }
   }
 }

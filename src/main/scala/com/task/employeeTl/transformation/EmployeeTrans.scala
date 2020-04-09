@@ -23,5 +23,9 @@ object EmployeeTrans {
   def selectDfCols(employeeDF: DataFrame, employeeCtcDF: DataFrame) = {
     employeeCtcDF.select(employeeDF("*"), employeeCtcDF("ctc"))
   }
-
+  def getEmpAge35PlusGrat800Less(employeeDF: DataFrame, employeeFinanceDF: DataFrame): DataFrame = {
+    employeeDF
+      .join(employeeFinanceDF
+        .filter(employeeFinanceDF("gratuity") < 800), employeeDF("empId") === employeeFinanceDF("empId"))
+  }
 }

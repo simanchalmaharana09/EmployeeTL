@@ -27,10 +27,4 @@ object DepartmentTrans {
       .join(broadcast(empAge35PlusGratuity800less.select(employeeDF("empId"))), "empId")
       .select(employeeDepartmentDF("*"))
   }
-
-  def getEmpAge35PlusGrat800Less(employeeDF: DataFrame, employeeFinanceDF: DataFrame): DataFrame = {
-    employeeDF
-      .join(employeeFinanceDF
-        .filter(employeeFinanceDF("gratuity") < 800), employeeDF("empId") === employeeFinanceDF("empId"))
-  }
 }
