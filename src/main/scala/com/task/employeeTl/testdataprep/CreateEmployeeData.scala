@@ -47,7 +47,7 @@ object CreateEmployeeData {
       // Create employee details
       val age = ageRangeStart + Random.nextInt((ageRangeEnd - ageRangeStart) + 1)
       val name = "name_" + id
-      val employee = Employee(id, name, surName.get(Random.nextInt(surName.size)).getOrElse(""), age)
+      val employee = Employee(id, name, surName.get(Random.nextInt(surName.size)).getOrElse("Afzal"), age)
 
       employeeList = employeeList :+ employee
 

@@ -10,10 +10,6 @@ object DepartmentTrans {
     departmentDF.filter(departmentDF("deptId") === deptWithMaxCount.get(0))
   }
 
-  def getDeptIdWithMaxCount(departmentWithEmpGrouped: Dataset[Row]): Row = {
-    departmentWithEmpGrouped.select("deptId").first
-  }
-
   def getDeptWithGroupedEmp(departmentWithEmpFiltered: DataFrame) = {
     val windowByDepId = Window.partitionBy("deptId")
     departmentWithEmpFiltered
@@ -22,9 +18,9 @@ object DepartmentTrans {
       .limit(1)
   }
 
-  def getDeptForFilteredEmp(employeeDF: DataFrame, employeeDepartmentDF: DataFrame, empAge35PlusGratuity800less: DataFrame): DataFrame = {
+  def getDeptForFilteredEmp(employeeDepartmentDF: DataFrame, empIdDf: DataFrame): DataFrame = {
     employeeDepartmentDF
-      .join(broadcast(empAge35PlusGratuity800less.select(employeeDF("empId"))), "empId")
+      .join(broadcast(empIdDf), "empId")
       .select(employeeDepartmentDF("*"))
   }
 }

@@ -11,7 +11,7 @@ object Utility {
       .load(sourcePath)
   }
 
-  def writeDfIntoPath(targetPath: String, resDf: DataFrame) = {
+  def writeDfIntoTarget(targetPath: String, resDf: DataFrame) = {
     resDf.repartition(1).write
       .mode("overwrite")
       .format("csv")
