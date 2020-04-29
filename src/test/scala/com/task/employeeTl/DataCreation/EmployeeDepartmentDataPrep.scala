@@ -1,6 +1,6 @@
 package com.task.employeeTl.DataCreation
 
-class EmployeeDepartmentData(deptIdList: List[Int]) {
+class EmployeeDepartmentDataPrep(deptIdList: List[Int]) {
 
   def createEmpDeptData(empId: Int, evenCount: Int, oddCount: Int): (Int, Int, Int) = {
     // Generate department data

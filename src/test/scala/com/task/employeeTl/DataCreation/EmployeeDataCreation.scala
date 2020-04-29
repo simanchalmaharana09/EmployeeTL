@@ -13,11 +13,11 @@ object EmployeeDataCreation {
     var employeeFinanceList = List[EmployeeFinance]()
     var employeeDeptList = List[EmployeeDept]()
 
-    val empPersonalDataPrep = new EmployeePersonalData(properties.ageRangeStart, properties.ageRangeEnd, properties.surNameMap)
-    val empFinancialDataPrep = new EmployeeFinancialData(properties.ctcRangeStart, properties.ctcRangeEnd)
+    val empPersonalDataPrep = new EmployeePersonalDataPre(properties.ageRangeStart, properties.ageRangeEnd, properties.surNameMap)
+    val empFinancialDataPrep = new EmployeeFinancialDataPrep(properties.ctcRangeStart, properties.ctcRangeEnd)
 
     var deptIdList: List[Int] = new Utils().prepareDeptList(properties.departmentDetailsPath)
-    val empDeptDataPrep = new EmployeeDepartmentData(deptIdList)
+    val empDeptDataPrep = new EmployeeDepartmentDataPrep(deptIdList)
 
     var evenCount: Int = 1
     var oddCount: Int = 2

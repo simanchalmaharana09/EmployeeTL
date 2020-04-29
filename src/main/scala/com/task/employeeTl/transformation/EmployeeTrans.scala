@@ -2,7 +2,7 @@ package com.task.employeeTl.transformation
 
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 
-object EmployeeTrans {
+class EmployeeTrans {
   def filterEmployeeByAge(employeeDF: DataFrame) = {
     employeeDF
       .filter(employeeDF("age") > 35)

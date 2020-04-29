@@ -4,10 +4,17 @@ import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.sql.expressions.{Window, WindowSpec}
 import org.apache.spark.sql.functions.{broadcast, desc}
 
-object DepartmentTrans {
+class DepartmentTrans {
 
   def getDeptDetailsForMaxCount(departmentDF: DataFrame, deptWithMaxCount: Row) = {
-    departmentDF.filter(departmentDF("deptId") === deptWithMaxCount.get(0))
+    try {
+      departmentDF.filter(departmentDF("deptId") === deptWithMaxCount.get(0))
+    } catch {
+      case ex: ArrayIndexOutOfBoundsException => {
+        println("Exception occured :-" + ex.getMessage())
+        departmentDF.limit(0)
+      }
+    }
   }
 
   def getDeptWithGroupedEmp(departmentWithEmpFiltered: DataFrame) = {
