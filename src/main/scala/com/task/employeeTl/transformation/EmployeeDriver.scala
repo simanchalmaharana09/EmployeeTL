@@ -1,34 +1,29 @@
 package com.task.employeeTl.transformation
 
 import com.task.employeeTl.util.Utility
-import com.typesafe.config.ConfigFactory
+import com.task.employeeTl.util.Utility.EnvProperties
 import org.apache.spark.sql.SparkSession
 
 object EmployeeDriver {
   def main(args: Array[String]): Unit = {
-    transformEmployeeDetails()
+    val env: String = "dev" // may be args(0)
+    transformEmployeeDetails(env)
   }
 
-  def transformEmployeeDetails() {
+  def transformEmployeeDetails(env: String) {
     val spark = SparkSession.builder().appName("EmployeeDetails").master("local").getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
 
-    val envPros = ConfigFactory.load().getConfig("dev") // need to be declared as constant variable
+    // Reading properties as per environment
+    val props: EnvProperties = Utility.readProperties(env)
 
-    val employeeDetailsPath = envPros.getString("employee_details_path")
-    val employeeFinanceDetailsPath = envPros.getString("employee_finance_details_path")
-    val employeeDeptDetailsPath = envPros.getString("employee_dept_details_path")
-    val departmentDetailsPath = envPros.getString("department_details_path")
-    val employeeFilteredResPath = envPros.getString("employee_filtered_res_path")
-    val departmentMaxEmpResPath = envPros.getString("department_max_emp_res_path")
+    var employeeDF = Utility.readDfFromSource(spark, props.employeeDetailsPath).toDF("empId", "firstName", "lastName", "age")
 
-    var employeeDF = Utility.readDfFromSource(spark, employeeDetailsPath).toDF("empId", "firstName", "lastName", "age")
+    val departmentDF = Utility.readDfFromSource(spark, props.departmentDetailsPath).toDF("deptId", "deptName")
 
-    val departmentDF = Utility.readDfFromSource(spark, departmentDetailsPath).toDF("deptId", "deptName")
+    var employeeFinanceDF = Utility.readDfFromSource(spark, props.employeeFinanceDetailsPath).toDF("empId", "ctc", "basic", "pf", "gratuity")
 
-    var employeeFinanceDF = Utility.readDfFromSource(spark, employeeFinanceDetailsPath).toDF("empId", "ctc", "basic", "pf", "gratuity")
-
-    val employeeDepartmentDF = Utility.readDfFromSource(spark, employeeDeptDetailsPath).toDF("empId", "deptId")
+    val employeeDepartmentDF = Utility.readDfFromSource(spark, props.employeeDeptDetailsPath).toDF("empId", "deptId")
 
     // for each scenario we need age > 35 and >40. so filtering for >35
     employeeDF = EmployeeTrans.filterEmployeeByAge(employeeDF)
@@ -47,9 +42,9 @@ object EmployeeDriver {
 
     // filter emp for age > 40 & ctc > 30,000. But dropping gratuity column for final output
     val empAge40PlusCtc30kPlus = EmployeeTrans.filterForAge40PlusCtc30kPlus(employeeWithFinanceDF.drop("gratuity"))
-    //empAge40PlusCtc30kPlus.show(10)
+    empAge40PlusCtc30kPlus.show(10)
     // Persisting final result into output location
-    Utility.writeDfIntoTarget(employeeFilteredResPath, empAge40PlusCtc30kPlus)
+    Utility.writeDfIntoTarget(props.employeeFilteredResPath, empAge40PlusCtc30kPlus)
 
     ////---- Computation for dept with max emp with age > 35 & gratuity < 800
     // already age > 35 filter applied at top. filtering only for grat < 800
@@ -67,9 +62,10 @@ object EmployeeDriver {
 
       // getting department details for max count employee
       val resultDept = DepartmentTrans.getDeptDetailsForMaxCount(departmentDF, deptWithMaxCount)
-      //resultDept.show(10)
+
+      resultDept.show(10)
       // Writing final result to hdfs
-      Utility.writeDfIntoTarget(departmentMaxEmpResPath, resultDept)
+      Utility.writeDfIntoTarget(props.departmentMaxEmpResPath, resultDept)
     }
   }
 }
